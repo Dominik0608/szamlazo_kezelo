@@ -1,0 +1,158 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<div class="container mt-3">
+  <div class="card mb-3">
+    <div class="card-body">
+      <p class="card-text">Nettó összeg: <strong>17,999 Ft</strong></p>
+      <p class="card-text">Áfa összeg: <strong>4,857 Ft</strong></p>
+      <p class="card-text">Bruttó végösszeg: <strong>22,856 Ft</strong></p>
+    </div>
+  </div>
+
+  <form id="order-form" class="mb-3">
+    <div class="mb-3">
+      <label for="address" class="form-label">Számlázási cím<span class="red-star">*</span></label>
+      <select class="form-select" id="address">
+        <option value="new" selected>Új számlázási címet adok meg</option>
+        {% for address in addresses %}
+          <option value="{{ address.id }}">{{ address.name }} - {{ address.country }} {{ address.postCode }} {{ address.city }} {{ address.street }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div id="address-details">
+      <div class="mb-3">
+        <label for="type" class="form-label">Típus<span class="red-star">*</span></label>
+        <select class="form-select" id="type">
+          <option value="1" selected>Magánszemély</option>
+          <option value="2">Cég</option>
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label for="name" class="form-label">Név / Cégnév<span class="red-star">*</span></label>
+        <input type="text" class="form-control" id="name">
+      </div>
+
+      <div class="mb-3">
+        <label for="phone" class="form-label">Telefonszám</label>
+        <input type="text" class="form-control" id="phone">
+      </div>
+
+      <div class="mb-3">
+        <label for="tax-number" class="form-label">Adószám<span class="red-star" id="tax-number-star">*</span></label>
+        <input type="text" class="form-control" id="tax-number">
+      </div>
+
+      <div class="mb-3">
+        <label for="country" class="form-label">Ország<span class="red-star">*</span></label>
+        <select class="form-select" id="country">
+          <option value="Magyarország" selected>Magyarország</option>
+          <option value="Németország">Németország</option>
+          <option value="Horvátország">Horvátország</option>
+          <option value="Szlovákia">Szlovákia</option>
+          <option value="Franciaország">Franciaország</option>
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label for="post-code" class="form-label">Irányítószám<span class="red-star">*</span></label>
+        <input type="text" class="form-control" id="post-code">
+      </div>
+
+      <div class="mb-3">
+        <label for="city" class="form-label">Város<span class="red-star">*</span></label>
+        <input type="text" class="form-control" id="city">
+      </div>
+
+      <div class="mb-3">
+        <label for="street" class="form-label">Utca, házszám<span class="red-star">*</span></label>
+        <input type="text" class="form-control" id="street">
+      </div>
+    </div>
+
+    <div class="form-check mb-3">
+      <input class="form-check-input" type="checkbox" value="" id="aszf" required>
+      <label class="form-check-label" for="aszf">
+        Kijelentem, hogy elolvastam és elfogadom az általános szerződési feltételeket.<span class="red-star">*</span>
+      </label>
+    </div>
+
+    <div class="text-center">
+      <button type="submit" class="btn btn-primary">Megrendelés</button>
+    </div>
+
+    <div class="alert mb-0 mt-3" id="alert" style="display: none;"></div>
+  </form>
+</div>
+
+<script>
+  $("#tax-number-star").hide();
+
+  $("#address").change(function() {
+    let type = $("#address").val();
+    if (type === "new") {
+      $("#address-details").show();
+    } else {
+      $("#address-details").hide();
+    }
+  });
+
+  $("#type").change(function() {
+    let type = $("#type").val();
+    if (type === "1") {
+      $("#tax-number").attr("required", false);
+      $("#tax-number-star").hide();
+    } else {
+      $("#tax-number").attr("required", true);
+      $("#tax-number-star").show();
+    }
+  });
+
+  $("#order-form").submit(function(event) {
+    event.preventDefault();
+    $('#alert').hide();
+    $('#alert').removeClass('alert-succes alert-danger');
+    
+    $.ajax({
+      type: 'POST',
+      url: '/order/create',
+      data: {
+        address: $('#address').val(),
+        type: $('#type').val(),
+        name: $('#name').val(),
+        phone: $('#phone').val(),
+        taxNumber: ($('#type').val() === '1' && $('#tax-number').val() === '') ? '-' : $('#tax-number').val(),
+        country: $('#country').val(),
+        postCode: $('#post-code').val(),
+        city: $('#city').val(),
+        street: $('#street').val(),
+      },
+      success: function (data) {
+        data = JSON.parse(data);
+        console.log('success:', data)
+        $('#alert').text(data.text);
+        $('#alert').addClass('alert-' + data.type);
+        $('#alert').show();
+
+        if (data.type === 'success') {
+          $('#name').val('');
+          $('#phone').val('');
+          $('#tax-number').val('');
+          $('#post-code').val('');
+          $('#city').val('');
+          $('#street').val('');
+        }
+      },
+      error: function (data) {
+        console.log('error:', data)
+        $('#alert').text('Hiba lépett fel a rögzítés során!');
+        $('#alert').addClass('alert-error');
+        $('#alert').show();
+      }
+    });
+  });
+</script>
+
+{% endblock %}

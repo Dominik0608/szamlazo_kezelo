@@ -1,0 +1,12 @@
+form label {
+  font-weight: 600;
+}
+
+form label span.red-star {
+  color: #f00;
+  padding-left: 3px;
+}
+
+table a {
+  cursor: pointer;
+}

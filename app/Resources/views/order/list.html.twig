@@ -1,0 +1,46 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<div class="container mt-2">
+  <h3 class="mt-2">Megrendelések</h3>
+  <div class="table-responsive">
+    <table class="table text-center">
+      <thead>
+        <tr>
+          <th>Sorszám</th>
+          <th>Típus</th>
+          <th>Név</th>
+          <th>Telefonszám</th>
+          <th>Adószám</th>
+          <th>Ország</th>
+          <th>Irányítószám</th>
+          <th>Város</th>
+          <th>Utca</th>
+          <th>Nettó</th>
+          <th>Áfa</th>
+          <th>Bruttó</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for order in orders %}
+          <tr>
+            <td>{{ order.id }}</td>
+            <td>{{ (order.type == '1') ? 'Magánszemély' : 'Céges' }}</td>
+            <td>{{ order.name }}</td>
+            <td>{{ order.phone }}</td>
+            <td>{{ order.taxNumber }}</td>
+            <td>{{ order.country }}</td>
+            <td>{{ order.postCode }}</td>
+            <td>{{ order.city }}</td>
+            <td>{{ order.street }}</td>
+            <td>{{ order.net }}</td>
+            <td>{{ order.vat }}</td>
+            <td>{{ order.gross }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

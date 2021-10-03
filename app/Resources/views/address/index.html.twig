@@ -1,0 +1,349 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<div class="container">
+  <h3 class="mt-2">Új számlázási cím létrehozása:</h3>
+  <form id="address-form" class="mb-3">
+    <input type="hidden" class="form-control" id="address-id">
+    <div class="mb-3">
+      <label for="type" class="form-label">Típus<span class="red-star">*</span></label>
+      <select class="form-select" id="type">
+        <option value="1" selected>Magánszemély</option>
+        <option value="2">Cég</option>
+      </select>
+    </div>
+
+    <div class="mb-3">
+      <label for="name" class="form-label">Név / Cégnév<span class="red-star">*</span></label>
+      <input type="text" class="form-control" id="name" maxlength="255" required>
+    </div>
+
+    <div class="mb-3">
+      <label for="phone" class="form-label">Telefonszám</label>
+      <input type="text" class="form-control" id="phone" maxlength="20">
+    </div>
+
+    <div class="mb-3">
+      <label for="tax-number" class="form-label">Adószám<span class="red-star" id="tax-number-star">*</span></label>
+      <input type="text" class="form-control" id="tax-number" maxlength="13">
+    </div>
+
+    <div class="mb-3">
+      <label for="country" class="form-label">Ország<span class="red-star">*</span></label>
+      <select class="form-select" id="country">
+        <option value="Magyarország" selected>Magyarország</option>
+        <option value="Németország">Németország</option>
+        <option value="Horvátország">Horvátország</option>
+        <option value="Szlovákia">Szlovákia</option>
+        <option value="Franciaország">Franciaország</option>
+      </select>
+    </div>
+
+    <div class="mb-3">
+      <label for="post-code" class="form-label">Irányítószám<span class="red-star">*</span></label>
+      <input type="text" class="form-control" id="post-code" maxlength="10" required>
+    </div>
+
+    <div class="mb-3">
+      <label for="city" class="form-label">Város<span class="red-star">*</span></label>
+      <input type="text" class="form-control" id="city" maxlength="64" required>
+    </div>
+
+    <div class="mb-3">
+      <label for="street" class="form-label">Utca, házszám<span class="red-star">*</span></label>
+      <input type="text" class="form-control" id="street" maxlength="128" required>
+    </div>
+
+    <div class="text-center">
+      <button id="create-button" type="submit" class="btn btn-primary">Új cím felvétele</button>
+      <button id="save-button" type="submit" class="btn btn-success" style="display: none;">Módosítások mentése</button>
+      <button id="cancel-button" type="reset" class="btn btn-danger" style="display: none;">Mégse</button>
+    </div>
+
+    <div class="alert mb-0 mt-3" id="alert" style="display: none;"></div>
+  </form>
+
+  <div class="table-responsive">
+    <table id="address-table" class="table text-center">
+      <thead>
+        <tr>
+          <th>Típus</th>
+          <th>Név</th>
+          <th>Telefonszám</th>
+          <th>Adószám</th>
+          <th>Ország</th>
+          <th>Irányítószám</th>
+          <th>Város</th>
+          <th>Utca</th>
+          <th>Műveletek</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for address in addresses %}
+          <tr>
+            <td>{{ (address.type == '1') ? 'Magánszemély' : 'Céges' }}</td>
+            <td>{{ address.name }}</td>
+            <td>{{ address.phone }}</td>
+            <td>{{ address.taxNumber }}</td>
+            <td>{{ address.country }}</td>
+            <td>{{ address.postCode }}</td>
+            <td>{{ address.city }}</td>
+            <td>{{ address.street }}</td>
+            <td>
+              <a class="edit-button" data-id="{{ address.id }}" data-bs-toggle="tooltip" data-bs-placement="top" title="Szerkesztés"><i class="fas fa-pencil-alt text-primary"></i></a>
+              <a class="delete-button" data-id="{{ address.id }}" data-bs-toggle="tooltip" data-bs-placement="top" title="Törlés"><i class="fas fa-trash-alt text-danger"></i></a>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  // Adószámról a piros * eltüntetése alapból
+  $("#tax-number-star").hide();
+
+  // Típus mező változtatása
+  $("#type").change(function() {
+    let type = $("#type").val();
+    if (type === "1") {
+      $("#tax-number").attr("required", false);
+      $("#tax-number-star").hide();
+    } else {
+      $("#tax-number").attr("required", true);
+      $("#tax-number-star").show();
+    }
+  });
+
+  // Új cím felvitele
+  $("#address-form").submit(function(event) {
+    event.preventDefault();
+    if ($('#address-id').val() != '') { return false; }
+    $('#alert').hide();
+    $('#alert').removeClass('alert-succes alert-danger');
+    
+    $.ajax({
+      type: 'POST',
+      url: '/address/create',
+      data: {
+        type: $('#type').val(),
+        name: $('#name').val(),
+        phone: $('#phone').val(),
+        taxNumber: ($('#type').val() === '1' && $('#tax-number').val() === '') ? '-' : $('#tax-number').val(),
+        country: $('#country').val(),
+        postCode: $('#post-code').val(),
+        city: $('#city').val(),
+        street: $('#street').val(),
+      },
+      success: function (data) {
+        data = JSON.parse(data);
+        console.log('success:', data)
+        $('#alert').text(data.text);
+        $('#alert').addClass('alert-' + data.type);
+        $('#alert').show();
+
+        if (data.type === 'success') {
+          $('#name').val('');
+          $('#phone').val('');
+          $('#tax-number').val('');
+          $('#post-code').val('');
+          $('#city').val('');
+          $('#street').val('');
+
+          getAddresses();
+        }
+      },
+      error: function (data) {
+        console.log('error:', data)
+        $('#alert').text('Hiba lépett fel a rögzítés során!');
+        $('#alert').addClass('alert-danger');
+        $('#alert').show();
+      }
+    });
+  });
+
+  // Szerkesztés (ceruza) gomb
+  $("#address-table").on("click", ".edit-button", function() {
+    let button = $(this);
+    let id = button.data('id');
+
+    $.ajax({
+      type: 'POST',
+      url: '/address/get/' + id,
+      data: {
+        id: id,
+      },
+      success: function (data) {
+        data = JSON.parse(data);
+        console.log('success:', data)
+
+        if (data.type === 'success') {
+          let address = data.address;
+          $('#address-id').val(address.id);
+          $('#type').val(address.type).change();
+          $('#name').val(address.name);
+          $('#phone').val(address.phone);
+          $('#tax-number').val(address.taxNumber);
+          $('#country').val(address.country);
+          $('#post-code').val(address.postCode);
+          $('#city').val(address.city);
+          $('#street').val(address.street);
+
+          $('#create-button').hide();
+          $('#save-button').show();
+          $('#cancel-button').show();
+        } else {
+          $('#alert').text(data.text);
+          $('#alert').addClass('alert-danger');
+          $('#alert').show();
+        }
+      },
+      error: function (data) {
+        console.log('error:', data)
+
+        $('#alert').text('Hiba lépett fel a cím betöltése során!');
+        $('#alert').addClass('alert-danger');
+        $('#alert').show();
+      }
+    });
+  });
+
+  // Módosítások mentése gomb
+  $("#address-form").submit(function(event) {
+    event.preventDefault();
+    if ($('#address-id').val() == '') { return false; }
+    $('#alert').hide();
+    $('#alert').removeClass('alert-succes alert-danger');
+
+    $.ajax({
+      type: 'POST',
+      url: '/address/save',
+      data: {
+        id: Number($('#address-id').val()),
+        type: $('#type').val(),
+        name: $('#name').val(),
+        phone: $('#phone').val(),
+        taxNumber: ($('#type').val() === '1' && $('#tax-number').val() === '') ? '-' : $('#tax-number').val(),
+        country: $('#country').val(),
+        postCode: $('#post-code').val(),
+        city: $('#city').val(),
+        street: $('#street').val(),
+      },
+      success: function (data) {
+        data = JSON.parse(data);
+        console.log('success:', data)
+
+        if (data.type === 'success') {
+          $('#alert').text(data.text);
+          $('#alert').addClass('alert-' + data.type);
+          $('#alert').show();
+
+          $('#address-form').trigger("reset");
+
+          $('#create-button').show();
+          $('#save-button').hide();
+          $('#cancel-button').hide();
+          $('#address-id').val('');
+
+          getAddresses();
+        } else {
+          $('#alert').text(data.text);
+          $('#alert').addClass('alert-danger');
+          $('#alert').show();
+        }
+      },
+      error: function (data) {
+        console.log('error:', data)
+
+        $('#alert').text('Hiba lépett fel a cím betöltése során!');
+        $('#alert').addClass('alert-danger');
+        $('#alert').show();
+      }
+    });
+  });
+
+  //$("#address-form").reset(function(event) {
+  $('#address-form').on('reset', function(event) {
+    $('#create-button').show();
+    $('#save-button').hide();
+    $('#cancel-button').hide();
+    $('#address-id').val('');
+  });
+
+  $("#address-table").on("click", ".delete-button", function() {
+    let button = $(this);
+    let id = button.data('id');
+    button.prop("disabled", true);
+    
+    $.ajax({
+      type: 'POST',
+      url: '/address/delete',
+      data: {
+        id: id,
+      },
+      success: function (data) {
+        data = JSON.parse(data);
+        console.log('success:', data)
+
+        $('#alert').text(data.text);
+        $('#alert').addClass('alert-' + data.type);
+        $('#alert').show();
+        
+        button.tooltip('dispose');
+        button.parent().parent().remove();
+      },
+      error: function (data) {
+        console.log('error:', data)
+
+        $('#alert').text('Hiba lépett fel a rögzítés során!');
+        $('#alert').addClass('alert-danger');
+        $('#alert').show();
+
+        button.prop("disabled", false);
+      }
+    });
+  });
+
+  const getAddresses = () => {
+    $.ajax({
+      type: 'GET',
+      url: '/addresses',
+      success: function (data) {
+        data = JSON.parse(data);
+        console.log('success:', data)
+
+        $('#address-table tbody').empty();
+        let table = '';
+        data.addresses.forEach(address => {
+          table += `
+            <tr>
+              <td>${(address.type == '1') ? 'Magánszemély' : 'Céges'}</td>
+              <td>${address.name}</td>
+              <td>${address.phone}</td>
+              <td>${address.taxNumber}</td>
+              <td>${address.country}</td>
+              <td>${address.postCode}</td>
+              <td>${address.city}</td>
+              <td>${address.street}</td>
+              <td>
+                <a class="edit-button" data-id="${address.id}" data-bs-toggle="tooltip" data-bs-placement="top" title="Szerkesztés"><i class="fas fa-pencil-alt text-primary"></i></a>
+                <a class="delete-button" data-id="${address.id}" data-bs-toggle="tooltip" data-bs-placement="top" title="Törlés"><i class="fas fa-trash-alt text-danger"></i></a>
+              </td>
+            </tr>
+          `
+        });
+        $('#address-table tbody').append(table);
+      },
+      error: function (data) {
+        console.log('error:', data)
+
+        $('#alert').text('Hiba lépett fel a címek betöltése során!');
+        $('#alert').addClass('alert-danger');
+        $('#alert').show();
+      }
+    });
+  }
+</script>
+
+{% endblock %}
