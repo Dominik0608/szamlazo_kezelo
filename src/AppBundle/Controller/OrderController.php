@@ -61,10 +61,26 @@ class OrderController extends Controller
       } else {
         $entityManager->persist($address);
         $entityManager->flush();
-        $order->address_id = $address->id;
+        $order->type = $request->request->get('type');
+        $order->name = $request->request->get('name');
+        $order->phone = $request->request->get('phone');
+        $order->taxNumber = $request->request->get('taxNumber');
+        $order->country = $request->request->get('country');
+        $order->postCode = $request->request->get('postCode');
+        $order->city = $request->request->get('city');
+        $order->street = $request->request->get('street');
       }
     } else { // Meglévő szállítási cím
-      $order->address_id = $request->request->get('address');
+      $address = $entityManager->find('AppBundle\Entity\Address', $request->request->get('address'));
+      
+      $order->type = $address->type;
+      $order->name = $address->name;
+      $order->phone = $address->phone;
+      $order->taxNumber = $address->taxNumber;
+      $order->country = $address->country;
+      $order->postCode = $address->postCode;
+      $order->city = $address->city;
+      $order->street = $address->street;
     }
 
     $net = rand(10000, 100000);
@@ -81,7 +97,7 @@ class OrderController extends Controller
       }
 
       $return = [
-        'type' => 'danger',
+        'type' => $request->request->get('name'),
         'text' => $errorsString
       ];
     } else {
@@ -101,20 +117,7 @@ class OrderController extends Controller
    * @Route("/orders", name="orders")
    */
   public function list(Request $request) {
-    $entityManager = $this->getDoctrine()->getManager();
-    $qb = $entityManager->createQueryBuilder();
-    $qb ->select('o.id', 'o.net', 'o.vat', 'o.gross', 'a.type', 'a.name', 'a.phone', 'a.taxNumber', 'a.country', 'a.postCode', 'a.city', 'a.street')
-        ->from('AppBundle\Entity\Order', 'o')
-        //->leftJoin('AppBundle\Entity\Address', 'a')
-        ->leftJoin(
-          'AppBundle\Entity\Address',
-          'a',
-          \Doctrine\ORM\Query\Expr\Join::WITH,
-          'a.id = o.address_id'
-        )
-        ->orderBy('o.id');
-
-    $orders = $qb->getQuery()->getResult();
+    $orders = $this->getDoctrine()->getRepository('AppBundle:Order')->findBy(array(), array('id' => 'ASC'));
 
     return $this->render('order/list.html.twig', [
       'orders' => $orders
